@@ -9,8 +9,8 @@ Changelog
   - keep the format consistent (88 char width, Y/M/D date format) and do not use tabs but
     use spaces for formatting
 
-Unreleased
-----------
+v0.13.1 (2026/11/10)
+--------------------
 Philip Loche, Henrik Stooß
 
 - Update GitHub links to the renamed ``atomistic-lab`` organization and point the
