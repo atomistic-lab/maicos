@@ -27,7 +27,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
-          python-version: "3.14"
+          python-version: "3.15"
       - name: Enable the slow benchmarks
         if: inputs.slow
         run: echo "ASV_RUN_SLOW=1" >> "$GITHUB_ENV"
