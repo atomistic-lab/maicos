@@ -16,19 +16,30 @@ sys.path.append(str(Path(__file__).parents[1]))
 from data import SPCE_GRO, SPCE_ITP
 
 
-def error_prop(f, variables, errors):
+def error_prop(f, variables, errors, covariances=None):
     """Analytic error propagation.
 
     This function takes a sympy expression, its variables, and
     the corresponding error values as inputs and returns the analytic
     error propagation as a regular python function of the variables.
+
+    ``covariances`` optionally maps pairs of variables ``(var_i, var_j)`` to the
+    covariance of their means, adding the cross terms
+    ``2 * df/dvar_i * df/dvar_j * cov``. Pairs not given are treated as uncorrelated.
     """
     assert len(variables) == len(errors)
-    error_propagation = 0
-    for i, var in enumerate(variables):
-        error_propagation += (np.abs(f.diff(var)) * errors[i]) ** 2
+    covariances = {} if covariances is None else covariances
+    grads = [sp.lambdify([*variables], f.diff(var)) for var in variables]
 
-    return sp.lambdify([*variables], sp.sqrt(error_propagation))
+    def propagate(*values):
+        g = [grad(*values) for grad in grads]
+        variance = sum((g_i * err) ** 2 for g_i, err in zip(g, errors, strict=True))
+        for (var_i, var_j), cov in covariances.items():
+            i, j = variables.index(var_i), variables.index(var_j)
+            variance = variance + 2 * g[i] * g[j] * cov
+        return np.sqrt(variance)
+
+    return propagate
 
 
 # Useful functions for creating test systems

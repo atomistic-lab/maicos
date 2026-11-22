@@ -9,6 +9,12 @@ Changelog
   - keep the format consistent (88 char width, Y/M/D date format) and do not use tabs but
     use spaces for formatting
 
+Unreleased
+----------
+Henrik Stooß
+
+- Include covariances between the radial observables in ``DielectricSphere`` (#618)
+
 v0.13.1 (2026/11/10)
 --------------------
 Philip Loche, Henrik Stooß
