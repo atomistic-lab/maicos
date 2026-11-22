@@ -13,7 +13,7 @@ Unreleased
 ----------
 Henrik Stooß
 
-- Include covariances between the radial observables in ``DielectricSphere`` (#618)
+- Include covariances between the radial observables in ``DielectricSphere`` (#620)
 
 v0.13.1 (2026/11/10)
 --------------------
