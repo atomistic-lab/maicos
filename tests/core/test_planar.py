@@ -500,7 +500,6 @@ class TestProfilePlanarBase:
 
         assert_allclose(actual, desired, rtol=1e-2)
 
-
     def test_number_profile_error(self, u, params):
         """Error of a number-normalized profile.
 
