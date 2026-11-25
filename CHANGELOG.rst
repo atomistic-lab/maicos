@@ -13,6 +13,8 @@ Unreleased
 ----------
 Henrik Stooß
 
+- Fix number-normalized cylindrical profiles (e.g. ``VelocityCylinder``) counting
+  particles outside ``zmin``/``zmax`` (#621)
 - Fix error calculation of number-normalized profiles  (#621)
 
 v0.13.1 (2026/11/10)
