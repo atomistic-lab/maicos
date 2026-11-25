@@ -13,7 +13,7 @@ Unreleased
 ----------
 Henrik Stooß
 
-- Fix error calculation of number-normalized profiles  (#?)
+- Fix error calculation of number-normalized profiles  (#621)
 
 v0.13.1 (2026/11/10)
 --------------------
