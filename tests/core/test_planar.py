@@ -500,8 +500,32 @@ class TestProfilePlanarBase:
 
         assert_allclose(actual, desired, rtol=1e-2)
 
-        # TODO(@PicoCentauri): Add test for error and standard deviation.
-        # Needs analytical estimaton of the error
+
+    def test_number_profile_error(self, u, params):
+        """Error of a number-normalized profile.
+
+        All atoms sit in a single bin and are weighted by their x coordinate, so the
+        profile is the mean over ``n_atoms * n_frames`` samples and its error is
+        ``std(samples) / sqrt(n_samples)``.
+        """
+        n_frames = 200
+        params.update(
+            weighting_function=lambda ag, grouping: ag.positions[:, 0],  # noqa: ARG005
+            zmin=-1,
+            zmax=0,
+            bin_width=1,
+        )
+        profile = ProfilePlanarBase(**params).run(stop=n_frames)
+
+        samples = np.concatenate(
+            [u.atoms.positions[:, 0] for _ in u.trajectory[:n_frames]]
+        ).astype(np.float64)
+
+        assert profile.n_bins == 1
+        assert_allclose(profile.results.profile, samples.mean(), rtol=1e-5)
+        assert_allclose(
+            profile.results.dprofile, samples.std() / np.sqrt(samples.size), rtol=1e-5
+        )
 
     def test_profile_precision(self, params):
         """Test profile precision."""
