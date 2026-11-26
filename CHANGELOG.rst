@@ -11,8 +11,10 @@ Changelog
 
 Unreleased
 ----------
-Philip Loche
+Philip Loche, Henrik Stooß
 
+- Fix density normalization in PDFCylidner (#622)
+- Fix pair matching in PDFPlanar when ``g1`` has more particles than ``g2`` (#622)
 - Add support for Python 3.15
 
 v0.13.1 (2026/11/10)

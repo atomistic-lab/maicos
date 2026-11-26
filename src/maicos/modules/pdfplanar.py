@@ -231,7 +231,6 @@ class PDFPlanar(PlanarBase):
             ]
 
             n_g1 = len(g1_in_zbin_positions)
-            n_g2 = len(g2_in_zbin_positions)
             self._obs.n_g1[z_bin] = n_g1
 
             # Extract z coordinate.
@@ -254,9 +253,10 @@ class PDFPlanar(PlanarBase):
                 box=self._universe.dimensions,
             )
 
-            # Map pairs (i, j) to a number i+N*j (so we can use np.isin).
-            z_pairs_encode = z_pairs[:, 0] + n_g2 * z_pairs[:, 1]
-            pairs_encode = pairs[:, 0] + n_g2 * pairs[:, 1]
+            # Map pairs (i, j) to a unique number i + n_g1 * j (so we can use np.isin).
+            # The g1 index i is always smaller than n_g1.
+            z_pairs_encode = z_pairs[:, 0] + n_g1 * z_pairs[:, 1]
+            pairs_encode = pairs[:, 0] + n_g1 * pairs[:, 1]
 
             mask_in_dz = np.isin(pairs_encode, z_pairs_encode)
             mask_different_atoms = np.where(xy_distances > 0, True, False)
