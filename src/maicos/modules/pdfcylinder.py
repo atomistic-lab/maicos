@@ -244,8 +244,17 @@ class PDFCylinder(CylinderBase):
                 )
             ]
 
-            self._obs.n_g1[r_bin] = len(g1_in_rbin_positions)
-            self._obs.n_g2[r_bin] = len(g2_in_rbin_positions)
+            n_g1 = len(g1_in_rbin_positions)
+            self._obs.n_g1[r_bin] = n_g1
+
+            # The reference density of g2 is taken from the bin itself, i.e. the
+            # volume `bin_volume`, not from the wider shell searched for pair partners.
+            self._obs.n_g2[r_bin] = np.sum(
+                (g2_bin_positions_cyl[:, 0] >= self._obs.bin_edges[r_bin])
+                & (g2_bin_positions_cyl[:, 0] < self._obs.bin_edges[r_bin + 1])
+                & (g2_bin_positions_cyl[:, 2] >= self.zmin)
+                & (g2_bin_positions_cyl[:, 2] <= self.zmax)
+            )
 
             # Below we abuse the 3D `capped_distance` search for do a distance search in
             # 1D distance by setting the other positions as well as the box size in
@@ -310,16 +319,13 @@ class PDFCylinder(CylinderBase):
                 ],  # minimum image convention in z direction (0, boxsize)
             )
 
-            # Map pairs (i, j) to a number i+N*j (so we can use np.isin).
-            r_pairs_encode = r_pairs[:, 0] + self._obs.n_g2[r_bin] * r_pairs[:, 1]
-            phi_pairs_encode = phi_pairs[:, 0] + self._obs.n_g2[r_bin] * phi_pairs[:, 1]
-            z_pairs_encode = z_pairs[:, 0] + self._obs.n_g2[r_bin] * z_pairs[:, 1]
-            phi_dist_pairs_encode = (
-                phi_dist_pairs[:, 0] + self._obs.n_g2[r_bin] * phi_dist_pairs[:, 1]
-            )
-            z_dist_pairs_encode = (
-                z_dist_pairs[:, 0] + self._obs.n_g2[r_bin] * z_dist_pairs[:, 1]
-            )
+            # Map pairs (i, j) to a unique number i + n_g1 * j (so we can use np.isin).
+            # The g1 index i is always smaller than n_g1.
+            r_pairs_encode = r_pairs[:, 0] + n_g1 * r_pairs[:, 1]
+            phi_pairs_encode = phi_pairs[:, 0] + n_g1 * phi_pairs[:, 1]
+            z_pairs_encode = z_pairs[:, 0] + n_g1 * z_pairs[:, 1]
+            phi_dist_pairs_encode = phi_dist_pairs[:, 0] + n_g1 * phi_dist_pairs[:, 1]
+            z_dist_pairs_encode = z_dist_pairs[:, 0] + n_g1 * z_dist_pairs[:, 1]
 
             # Filter pairs that are in the same dr bin and dz bin.
             mask_in_dr_and_dz = np.isin(
@@ -352,7 +358,10 @@ class PDFCylinder(CylinderBase):
         super()._conclude()
 
         # Calculate the density of g2.
-        g2_density = self.means.n_g2 / self.means.bin_volume if self.density else 1
+        if self.density:
+            g2_density = self.means.n_g2 / self.means.bin_volume[:, np.newaxis]
+        else:
+            g2_density = 1
 
         # Normalising volume for the angular PDF. This is 2(R*dR*2dz*2dphi),
         # where R is the radius of the bin center, dR is the width of the pdf bin.

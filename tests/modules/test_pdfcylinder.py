@@ -17,7 +17,11 @@ from maicos import PDFCylinder
 
 sys.path.append(str(Path(__file__).parents[1]))
 from data import SPCE_GRO, SPCE_ITP
-from util import circle_of_water_molecules, line_of_water_molecules
+from util import (
+    circle_of_water_molecules,
+    line_of_water_molecules,
+    point_particles,
+)
 
 
 class TestPDFCylinder:
@@ -27,6 +31,98 @@ class TestPDFCylinder:
     def spce_water(self):
         """Return a universe with 1 water molecule."""
         return mda.Universe(SPCE_ITP, SPCE_GRO)
+
+    @pytest.fixture
+    def ideal_gas_cylinder(self):
+        """Return an ideal gas filling a cylinder of radius 10 Å along z."""
+        rng = np.random.default_rng(1)
+        n_frames, n_atoms, radius, side, length = 50, 2000, 10.0, 30.0, 50.0
+        r = radius * np.sqrt(rng.random((n_frames, n_atoms)))
+        phi = 2 * np.pi * rng.random((n_frames, n_atoms))
+        z = length * rng.random((n_frames, n_atoms))
+        positions = np.stack(
+            [side / 2 + r * np.cos(phi), side / 2 + r * np.sin(phi), z], axis=-1
+        )
+        return point_particles(positions, [side, side, length, 90, 90, 90])
+
+    @pytest.mark.parametrize(
+        ("rmin", "rmax", "bin_width", "zmin", "zmax"),
+        [
+            (5, 6, 1, None, None),
+            (5, 7, 1, None, None),
+            (4, 6, 0.5, None, None),
+            (5, 6, 1, -10, 10),
+        ],
+    )
+    def test_density_ideal_gas(
+        self, ideal_gas_cylinder, rmin, rmax, bin_width, zmin, zmax
+    ):
+        """Test that the density normalised PDF of an ideal gas is one."""
+        ana_obj = PDFCylinder(
+            ideal_gas_cylinder.atoms,
+            rmin=rmin,
+            rmax=rmax,
+            bin_width=bin_width,
+            zmin=zmin,
+            zmax=zmax,
+            drwidth=0.25,
+            bin_width_pdf_z=1,
+            bin_width_pdf_phi=0.1,
+            density=True,
+        ).run()
+
+        n_bins = round((rmax - rmin) / bin_width)
+        assert ana_obj.results.pdf_z.shape == (n_bins, ana_obj.nbins_pdf_z)
+        assert ana_obj.results.pdf_phi.shape == (n_bins, ana_obj.nbins_pdf_phi)
+        assert_allclose(ana_obj.results.pdf_z.mean(axis=1), 1, rtol=0.05)
+        assert_allclose(ana_obj.results.pdf_phi.mean(axis=1), 1, rtol=0.05)
+
+    def test_counts_distinct_groups(self):
+        """Test pair counts against brute force for more g1 than g2 particles."""
+        rng = np.random.default_rng(3)
+        n_g1, n_g2, side, length, drwidth = 60, 6, 20.0, 20.0, 0.5
+        r = 2 + rng.random(n_g1 + n_g2)
+        phi = 2 * np.pi * rng.random(n_g1 + n_g2)
+        z = length * rng.random(n_g1 + n_g2)
+        positions = np.stack(
+            [side / 2 + r * np.cos(phi), side / 2 + r * np.sin(phi), z], axis=-1
+        )
+        u = point_particles(positions[None], [side, side, length, 90, 90, 90])
+
+        ana_obj = PDFCylinder(
+            u.atoms[:n_g1],
+            u.atoms[n_g1:],
+            rmin=2,
+            rmax=3,
+            bin_width=1,
+            drwidth=drwidth,
+            bin_width_pdf_z=1,
+            bin_width_pdf_phi=0.3,
+        ).run()
+
+        # All particles lie in the single radial bin, so every g1-g2 pair is a
+        # candidate.
+        def distance(x):
+            return np.abs(x[:n_g1, np.newaxis] - x[np.newaxis, n_g1:])
+
+        dr = distance(r)
+        dphi = np.minimum(distance(phi), 2 * np.pi - distance(phi))
+        dz = np.minimum(distance(z), length - distance(z))
+        r_bin = ana_obj.results.bin_pos[0]
+
+        mask_phi = (dr <= drwidth) & (dz <= drwidth) & (dphi > 0)
+        mask_z = (dr <= drwidth) & (dphi <= drwidth / r_bin) & (dz > 0)
+        count_phi = np.histogram(
+            dphi[mask_phi], bins=ana_obj.nbins_pdf_phi, range=(0, np.pi)
+        )[0]
+        count_z = np.histogram(
+            dz[mask_z], bins=ana_obj.nbins_pdf_z, range=(ana_obj.dmin, ana_obj.dmax)
+        )[0]
+
+        assert count_phi.sum() > 0
+        assert count_z.sum() > 0
+        assert_equal(ana_obj._obs.count_phi[0], count_phi)
+        assert_equal(ana_obj._obs.count_z[0], count_z)
 
     @pytest.mark.parametrize("dim", [0, 1, 2])
     def test_dmax(self, spce_water, dim):

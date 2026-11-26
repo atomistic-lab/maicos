@@ -11,6 +11,7 @@ from pathlib import Path
 import MDAnalysis as mda
 import numpy as np
 import sympy as sp
+from MDAnalysis.coordinates.memory import MemoryReader
 
 sys.path.append(str(Path(__file__).parents[1]))
 from data import SPCE_GRO, SPCE_ITP
@@ -43,6 +44,21 @@ def error_prop(f, variables, errors, covariances=None):
 
 
 # Useful functions for creating test systems
+
+
+def point_particles(positions: np.ndarray, dimensions: list[float]) -> mda.Universe:
+    """Universe of unit mass point particles with ``positions`` as trajectory.
+
+    ``positions`` has the shape ``(n_frames, n_atoms, 3)``. Every particle is its own
+    residue.
+    """
+    n_atoms = positions.shape[1]
+    u = mda.Universe.empty(
+        n_atoms, n_residues=n_atoms, atom_resindex=np.arange(n_atoms), trajectory=True
+    )
+    u.add_TopologyAttr("masses", np.ones(n_atoms))
+    u.load_new(positions, format=MemoryReader, dimensions=dimensions)
+    return u
 
 
 def line_of_water_molecules(

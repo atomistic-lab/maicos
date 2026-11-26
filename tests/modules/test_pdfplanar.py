@@ -18,6 +18,7 @@ from maicos.lib.util import get_compound
 
 sys.path.append(str(Path(__file__).parents[1]))
 from data import SPCE_GRO, SPCE_ITP
+from util import point_particles
 
 
 class TestPDFPlanar:
@@ -187,6 +188,39 @@ class TestPDFPlanar:
         """Test grouping for a non existing bin_method."""
         with pytest.raises(ValueError, match="is an unknown binning"):
             self.run_pdf(get_universe, bin_method="foo")
+
+    def test_count_distinct_groups(self):
+        """Test pair counts against brute force for more g1 than g2 particles."""
+        rng = np.random.default_rng(3)
+        n_g1, n_g2, box_length, dzheight = 60, 6, 20.0, 0.5
+        # Put all particles inside the slab of the single z bin, [9, 11).
+        positions = rng.random((n_g1 + n_g2, 3)) * [box_length, box_length, 1]
+        positions[:, 2] += 9.5
+        u = point_particles(positions[None], 3 * [box_length] + 3 * [90])
+
+        pdfplanar = PDFPlanar(
+            u.atoms[:n_g1],
+            u.atoms[n_g1:],
+            zmin=-1,
+            zmax=1,
+            bin_width=2,
+            dzheight=dzheight,
+            pdf_bin_width=1,
+        ).run()
+
+        # Minimum image distances between all g1-g2 pairs.
+        diff = positions[:n_g1, np.newaxis] - positions[np.newaxis, n_g1:]
+        diff -= box_length * np.round(diff / box_length)
+        distances = np.linalg.norm(diff, axis=-1)
+        mask = (np.abs(diff[..., 2]) <= dzheight) & (distances > 0)
+        count = np.histogram(
+            distances[mask],
+            bins=pdfplanar.pdf_nbins,
+            range=(pdfplanar.dmin, pdfplanar.dmax),
+        )[0]
+
+        assert count.sum() > 0
+        assert_equal(pdfplanar._obs.count[0], count)
 
     def test_large_range(self, get_universe):
         """Test that range is larger thanhalf of the cell length."""
