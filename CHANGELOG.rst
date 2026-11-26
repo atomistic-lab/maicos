@@ -11,9 +11,13 @@ Changelog
 
 Unreleased
 ----------
-Henrik Stooß
+Philip Loche, Henrik Stooß
 
 - Include covariances between the radial observables in ``DielectricSphere`` (#620)
+- Fix number-normalized cylindrical profiles counting particles outside the
+  ``zmin``-``zmax`` range (#621)
+- Fix error calculation of number-normalized profiles  (#621)
+- Add support for Python 3.15 (#619)
 
 v0.13.1 (2026/11/10)
 --------------------

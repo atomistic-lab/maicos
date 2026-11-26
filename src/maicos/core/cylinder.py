@@ -238,6 +238,8 @@ class ProfileCylinderBase(CylinderBase, ProfileBase):  # type: ignore
         # Also, can we somehow abstract this away?
         bin_indices = np.digitize(positions[:, 0], bin_edges) - 1
         bin_indices[bin_indices == self.n_bins] = -1
+        # Like the histogram, exclude particles outside the z range.
+        bin_indices[(positions[:, 2] < self.zmin) | (positions[:, 2] > self.zmax)] = -1
 
         # Reshape into 1D array
         return hist[:, 0], bin_indices
