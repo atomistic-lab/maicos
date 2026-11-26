@@ -16,6 +16,11 @@ Philip Loche, Henrik Stooß
 - Fix density normalization in PDFCylidner (#622)
 - Fix pair matching in PDFPlanar when ``g1`` has more particles than ``g2`` (#622)
 - Add support for Python 3.15
+- Include covariances between the radial observables in ``DielectricSphere`` (#620)
+- Fix number-normalized cylindrical profiles counting particles outside the
+  ``zmin``-``zmax`` range (#621)
+- Fix error calculation of number-normalized profiles  (#621)
+- Add support for Python 3.15 (#619)
 
 v0.13.1 (2026/11/10)
 --------------------

@@ -494,8 +494,33 @@ class TestProfileCylinderBase:
 
         assert_allclose(actual, desired, rtol=1e-2)
 
-        # TODO(@PicoCentauri): Add test for error and standard deviation.
-        # Needs analytical estimaton of the error
+    def test_number_profile_zlimits(self, u, params):
+        """Number-normalized profile only counts particles inside ``zmin``/``zmax``.
+
+        Only atoms that lie in the z range should be counted, so the profile and its
+        error must equal the mean and SEM of those atoms alone.
+        """
+        n_frames = 200
+        params.update(
+            weighting_function=lambda ag, grouping: ag.positions[:, 0],  # noqa: ARG005
+            bin_width=1,
+            zmin=-0.75,
+            zmax=-0.25,
+        )
+        profile = ProfileCylinderBase(**params).run(stop=n_frames)
+
+        samples = []
+        for _ in u.trajectory[:n_frames]:
+            pos = u.atoms.positions.astype(np.float64)
+            in_z = (pos[:, 2] >= 0.25) & (pos[:, 2] <= 0.75)
+            samples.append(pos[in_z, 0])
+        samples = np.concatenate(samples)
+
+        assert profile.n_bins == 1
+        assert_allclose(profile.results.profile, samples.mean(), rtol=1e-5)
+        assert_allclose(
+            profile.results.dprofile, samples.std() / np.sqrt(samples.size), rtol=1e-5
+        )
 
     @pytest.mark.parametrize(
         "grouping", ["atoms", "segments", "residues", "molecules", "fragments"]

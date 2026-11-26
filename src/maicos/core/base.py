@@ -319,7 +319,8 @@ class AnalysisBase(_Runner, MDAnalysis.analysis.base.AnalysisBase):
 
     #: Observable pairs to accumulate the off-diagonal covariance.
     #: Each entry names two observable keys, e.g. ``[{"x", "y"}, {"x", "z"}]``.
-    #: See :class:`~maicos.DielectricCylinder` for a module using it.
+    #: See :class:`~maicos.DielectricCylinder` and :class:`~maicos.DielectricSphere`
+    #: for modules using it.
     _compute_covariance: ClassVar[list[set[str]]] = []
 
     if TYPE_CHECKING:  # pragma: no cover
@@ -1106,7 +1107,7 @@ class ProfileBase:
             self._var.profile, _ = (  # type: ignore
                 self._compute_histogram(  # type: ignore
                     positions,
-                    weights - self._obs.profile[bin_indices],  # type: ignore
+                    (weights - self._obs.profile[bin_indices]) ** 2,  # type: ignore
                 )
             )  # type: ignore
             with np.errstate(divide="ignore", invalid="ignore"):
