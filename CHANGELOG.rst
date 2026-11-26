@@ -13,6 +13,7 @@ Unreleased
 ----------
 Philip Loche, Henrik Stooß
 
+- Include covariances between the radial observables in ``DielectricSphere`` (#620)
 - Fix number-normalized cylindrical profiles counting particles outside the
   ``zmin``-``zmax`` range (#621)
 - Fix error calculation of number-normalized profiles  (#621)

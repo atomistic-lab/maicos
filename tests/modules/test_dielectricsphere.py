@@ -21,7 +21,6 @@ sys.path.append(str(Path(__file__).parents[1]))
 from data import (
     DIPOLE_GRO,
     DIPOLE_ITP,
-    WATER_2F_TRR_NPT,
     WATER_GRO_NPT,
     WATER_TPR_NPT,
     WATER_TRR_NPT,
@@ -64,12 +63,6 @@ class TestDielectricSphere:
     def ag_single_frame(self):
         """Import MDA universe, single frame."""
         u = mda.Universe(WATER_TPR_NPT, WATER_GRO_NPT)
-        return u.atoms
-
-    @pytest.fixture
-    def ag_two_frames(self):
-        """Import MDA universe, single frame."""
-        u = mda.Universe(WATER_TPR_NPT, WATER_2F_TRR_NPT)
         return u.atoms
 
     @pytest.mark.parametrize("selection", [1, 2])
@@ -181,29 +174,23 @@ class TestDielectricSphere:
         DielectricSphere(ag, rmin=rmin, rmax=rmax)
         assert result == (warning in "".join([rec.message for rec in caplog.records]))
 
-    def test_error_calculation(self, ag_two_frames):
-        """Test the analytic error propagation."""
-        eps = DielectricSphere(ag_two_frames).run()
-        eps.means.mM_r = 0.6
-        eps.sems.mM_r = 0.2
+    def test_error_propagation(self, ag):
+        """Test the error propagation, including covariances, against SymPy."""
+        eps = DielectricSphere(ag).run()
 
-        eps.means.m_r = 0.4
-        eps.sems.m_r = 0.1
-
-        eps.means.M_r = 0.2
-        eps.sems.M_r = 0.01
-
-        # rerun conclude function with changed values
-        eps._conclude()
         mM_r, m_r, M_r = sp.symbols("mM_r m_r M_r")
-
         cov_rad_sympy = mM_r - m_r * M_r
 
-        eps_rad_sympy = 1 - (
-            4 * np.pi * eps.results.bin_pos[0] ** 2 * eps._pref * cov_rad_sympy
-        )
-
-        deps_rad_sympy = error_prop(
-            eps_rad_sympy, [mM_r, m_r, M_r], [eps.sems.mM_r, eps.sems.m_r, eps.sems.M_r]
+        dcov_rad_sympy = error_prop(
+            cov_rad_sympy,
+            [mM_r, m_r, M_r],
+            [eps.sems.mM_r, eps.sems.m_r, eps.sems.M_r],
+            covariances={
+                (mM_r, m_r): eps.moments.cov("mM_r", "m_r"),
+                (mM_r, M_r): eps.moments.cov("mM_r", "M_r"),
+                (m_r, M_r): eps.moments.cov("m_r", "M_r"),
+            },
         )(eps.means.mM_r, eps.means.m_r, eps.means.M_r)
-        assert_allclose(eps.results.deps_rad[0], deps_rad_sympy)
+
+        deps_rad_sympy = 4 * np.pi * eps.results.bin_pos**2 * eps._pref * dcov_rad_sympy
+        assert_allclose(deps_rad_sympy, eps.results.deps_rad)
