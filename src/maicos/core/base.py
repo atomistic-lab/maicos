@@ -1106,7 +1106,7 @@ class ProfileBase:
             self._var.profile, _ = (  # type: ignore
                 self._compute_histogram(  # type: ignore
                     positions,
-                    weights - self._obs.profile[bin_indices],  # type: ignore
+                    (weights - self._obs.profile[bin_indices]) ** 2,  # type: ignore
                 )
             )  # type: ignore
             with np.errstate(divide="ignore", invalid="ignore"):
